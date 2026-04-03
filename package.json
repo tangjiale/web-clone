@@ -1,0 +1,99 @@
+{
+  "name": "web-clone-manager",
+  "private": true,
+  "version": "0.1.0",
+  "webCloneUpdateUrl": "https://github.com/tangjiale/web-clone/releases/latest/download/latest.json",
+  "description": "桌面端网站多账号分身管理工具，支持站点分身、独立 Cookie 与本地存储隔离，以及内嵌/外置双模式浏览。",
+  "author": "Tang Jiale",
+  "repository": "tangjiale/web-clone",
+  "homepage": "https://github.com/tangjiale/web-clone",
+  "bugs": {
+    "url": "https://github.com/tangjiale/web-clone/issues"
+  },
+  "license": "UNLICENSED",
+  "main": "electron/main.cjs",
+  "type": "module",
+  "scripts": {
+    "postinstall": "npm run rebuild:electron",
+    "rebuild:electron": "electron-builder install-app-deps",
+    "sync-version": "node ./scripts/release/sync-version.cjs",
+    "release:package": "node ./scripts/release/package-release.cjs",
+    "dev": "vite --host 0.0.0.0 --port 1420",
+    "dev:electron": "wait-on tcp:1420 && ./scripts/run-dev-electron.sh",
+    "dev:desktop": "npm run rebuild:electron && concurrently -k \"npm:dev\" \"npm:dev:electron\"",
+    "build": "tsc && vite build",
+    "build:desktop": "npm run rebuild:electron && npm run build && electron-builder",
+    "build:mac": "npm run rebuild:electron && npm run build && electron-builder --mac dmg",
+    "build:mac:arm64": "npm run rebuild:electron && npm run build && electron-builder --mac dmg --arm64",
+    "build:mac:x64": "npm run rebuild:electron && npm run build && electron-builder --mac dmg --x64",
+    "build:mac:universal": "npm run rebuild:electron && npm run build && electron-builder --mac dmg --universal",
+    "build:linux:x64": "npm run rebuild:electron && npm run build && electron-builder --linux AppImage deb rpm --x64",
+    "build:linux:arm64": "npm run rebuild:electron && npm run build && electron-builder --linux AppImage deb rpm --arm64",
+    "build:win": "npm run rebuild:electron && npm run build && electron-builder --win nsis",
+    "preview": "vite preview",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@ant-design/icons": "^5.6.1",
+    "@tauri-apps/api": "^2.8.0",
+    "antd": "^5.27.1",
+    "axios": "^1.11.0",
+    "better-sqlite3": "^12.8.0",
+    "dayjs": "^1.11.13",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.8.0",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.1",
+    "concurrently": "^9.2.1",
+    "electron": "^41.1.1",
+    "electron-builder": "^26.8.1",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.8",
+    "wait-on": "^9.0.4"
+  },
+  "build": {
+    "appId": "com.webclone.manager",
+    "productName": "网站分身管理器",
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": [
+        "dmg"
+      ],
+      "icon": "src-tauri/icons/icon.icns"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "src-tauri/icons/icon.ico"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb",
+        "rpm"
+      ],
+      "category": "Utility",
+      "icon": "src-tauri/icons"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  }
+}

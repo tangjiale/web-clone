@@ -1,0 +1,310 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  meta:
+    name: Read release metadata
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      release_name: ${{ steps.version.outputs.release_name }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Read app version
+        id: version
+        shell: bash
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=v${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "release_name=网站分身管理器 v${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Validate tag matches package version
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: |
+          EXPECTED_TAG="v${{ steps.version.outputs.version }}"
+          if [ "${GITHUB_REF_NAME}" != "${EXPECTED_TAG}" ]; then
+            echo "Tag (${GITHUB_REF_NAME}) does not match package.json version (${EXPECTED_TAG})."
+            exit 1
+          fi
+
+  build:
+    name: Build ${{ matrix.label }}
+    needs: meta
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: "macOS Apple Silicon"
+            platform: "macos-latest"
+            build_args: "--mac dmg --arm64 --publish never"
+            collect_platform_id: "darwin-arm64"
+          - label: "macOS Intel"
+            platform: "macos-latest"
+            build_args: "--mac dmg --x64 --publish never"
+            collect_platform_id: "darwin-x64"
+          - label: "macOS Universal"
+            platform: "macos-latest"
+            build_args: "--mac dmg --universal --publish never"
+            collect_platform_id: "darwin-universal"
+          - label: "Linux x64"
+            platform: "ubuntu-22.04"
+            build_args: "--linux AppImage deb rpm --x64 --publish never"
+            collect_platform_id: "linux-x64"
+          - label: "Linux ARM64"
+            platform: "ubuntu-24.04-arm"
+            build_args: "--linux AppImage deb rpm --arm64 --publish never"
+            collect_platform_id: "linux-arm64"
+          - label: "Windows x64"
+            platform: "windows-latest"
+            build_args: "--win nsis --x64 --publish never"
+            collect_platform_id: "windows-x64"
+
+    runs-on: ${{ matrix.platform }}
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      ELECTRON_CACHE: ${{ runner.temp }}/electron
+      ELECTRON_BUILDER_CACHE: ${{ runner.temp }}/electron-builder
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Linux packaging dependencies
+        if: startsWith(matrix.platform, 'ubuntu')
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential python3 make g++ rpm libarchive-tools
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Sync versions
+        run: npm run sync-version
+
+      - name: Configure update feed URL
+        shell: bash
+        run: |
+          npm pkg set webCloneUpdateUrl="https://github.com/${GITHUB_REPOSITORY}/releases/latest/download/latest.json"
+
+      - name: Build web assets
+        run: npm run build
+
+      - name: Build desktop package
+        run: npx electron-builder ${{ matrix.build_args }}
+
+      - name: Normalize release artifacts
+        run: >
+          node ./scripts/release/collect_release_artifacts.cjs
+          --source-dir release
+          --output-dir release-upload
+          --platform-id ${{ matrix.collect_platform_id }}
+          --version ${{ needs.meta.outputs.version }}
+
+      - name: Upload packaged artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.collect_platform_id }}
+          path: release-upload/**/*
+          if-no-files-found: error
+
+  release:
+    name: Create GitHub draft release
+    needs:
+      - meta
+      - build
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download packaged artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: Show release assets
+        shell: bash
+        run: |
+          find release-assets -type f | sort
+
+      - name: Build bilingual release notes from changelog
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          VERSION="${{ needs.meta.outputs.version }}"
+
+          extract_section() {
+            local file="$1"
+            local version="$2"
+
+            awk -v version="$version" '
+              BEGIN {
+                capture = 0
+                found = 0
+              }
+
+              /^## / {
+                if (capture) {
+                  exit
+                }
+                if ($0 ~ ("^## \\[" version "\\][[:space:]]*-.*$") || $0 ~ ("^## \\[v" version "\\][[:space:]]*-.*$")) {
+                  capture = 1
+                  found = 1
+                }
+              }
+
+              capture {
+                print
+              }
+
+              END {
+                if (!found) {
+                  exit 2
+                }
+              }
+            ' "$file"
+          }
+
+          zh_section="$(extract_section CHANGELOG.zh-CN.md "$VERSION")"
+          en_section="$(extract_section CHANGELOG.md "$VERSION")"
+
+          {
+            echo "## 更新日志（中文）"
+            echo
+            printf '%s\n' "$zh_section"
+            echo
+            echo "## Changelog (English)"
+            echo
+            printf '%s\n' "$en_section"
+          } > release-notes.md
+
+      - name: Publish release draft
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.meta.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: ${{ needs.meta.outputs.release_name }}
+          body_path: release-notes.md
+          draft: true
+          prerelease: false
+          files: |
+            release-assets/**/*
+
+  update-manifest:
+    name: Build latest.json and checksums
+    needs:
+      - meta
+      - release
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Download packaged artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: Read release metadata
+        shell: bash
+        run: |
+          gh release view "${{ needs.meta.outputs.tag }}" --json body,publishedAt,createdAt --jq '.body' > release-notes.md
+          PUBLISHED_AT="$(gh release view "${{ needs.meta.outputs.tag }}" --json publishedAt,createdAt --jq '.publishedAt // .createdAt')"
+          if [ -z "${PUBLISHED_AT}" ] || [ "${PUBLISHED_AT}" = "null" ]; then
+            PUBLISHED_AT="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          fi
+          echo "PUBLISHED_AT=${PUBLISHED_AT}" >> "$GITHUB_ENV"
+          echo "RELEASE_URL=https://github.com/${GITHUB_REPOSITORY}/releases/tag/${{ needs.meta.outputs.tag }}" >> "$GITHUB_ENV"
+
+      - name: Build latest.json
+        run: >
+          node ./scripts/release/build_latest_json.cjs
+          --version ${{ needs.meta.outputs.version }}
+          --repo ${{ github.repository }}
+          --assets-dir release-assets
+          --notes-file release-notes.md
+          --published-at ${{ env.PUBLISHED_AT }}
+          --release-url ${{ env.RELEASE_URL }}
+          --output latest.json
+
+      - name: Generate SHA256SUMS.txt
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd release-assets
+          find . -type f -print0 \
+            | sort -z \
+            | while IFS= read -r -d '' file; do
+                sha256sum "$file"
+              done \
+            | sed 's#  \./#  #' \
+            > ../SHA256SUMS.txt
+          cd ..
+          test -s SHA256SUMS.txt
+
+      - name: Upload latest.json and SHA256SUMS.txt
+        shell: bash
+        run: |
+          gh release upload "${{ needs.meta.outputs.tag }}" latest.json SHA256SUMS.txt --clobber
+
+  publish-release:
+    name: Publish release as latest
+    needs:
+      - meta
+      - update-manifest
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - name: Publish draft release
+        shell: bash
+        run: |
+          gh release edit "${{ needs.meta.outputs.tag }}" \
+            --draft=false \
+            --prerelease=false \
+            --latest
