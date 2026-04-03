@@ -4,7 +4,11 @@
   "version": "0.1.0",
   "webCloneUpdateUrl": "https://github.com/tangjiale/web-clone/releases/latest/download/latest.json",
   "description": "桌面端网站多账号分身管理工具，支持站点分身、独立 Cookie 与本地存储隔离，以及内嵌/外置双模式浏览。",
-  "author": "Tang Jiale",
+  "author": {
+    "name": "Tang Jiale",
+    "email": "tang.jia.le@finsiot.com",
+    "url": "https://github.com/tangjiale"
+  },
   "repository": "tangjiale/web-clone",
   "homepage": "https://github.com/tangjiale/web-clone",
   "bugs": {
@@ -30,12 +34,10 @@
     "build:linux:x64": "npm run rebuild:electron && npm run build && electron-builder --linux AppImage deb rpm --x64",
     "build:linux:arm64": "npm run rebuild:electron && npm run build && electron-builder --linux AppImage deb rpm --arm64",
     "build:win": "npm run rebuild:electron && npm run build && electron-builder --win nsis",
-    "preview": "vite preview",
-    "tauri": "tauri"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@ant-design/icons": "^5.6.1",
-    "@tauri-apps/api": "^2.8.0",
     "antd": "^5.27.1",
     "axios": "^1.11.0",
     "better-sqlite3": "^12.8.0",
@@ -44,7 +46,6 @@
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2.8.0",
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.1",
@@ -72,13 +73,13 @@
       "target": [
         "dmg"
       ],
-      "icon": "src-tauri/icons/icon.icns"
+      "icon": "build-resources/icons/icon.icns"
     },
     "win": {
       "target": [
         "nsis"
       ],
-      "icon": "src-tauri/icons/icon.ico"
+      "icon": "build-resources/icons/icon.ico"
     },
     "linux": {
       "target": [
@@ -87,7 +88,8 @@
         "rpm"
       ],
       "category": "Utility",
-      "icon": "src-tauri/icons"
+      "maintainer": "Tang Jiale <tang.jia.le@finsiot.com>",
+      "icon": "build-resources/icons"
     },
     "nsis": {
       "oneClick": false,
