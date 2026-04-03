@@ -80,8 +80,6 @@ jobs:
     runs-on: ${{ matrix.platform }}
     env:
       CSC_IDENTITY_AUTO_DISCOVERY: "false"
-      ELECTRON_CACHE: ${{ runner.temp }}/electron
-      ELECTRON_BUILDER_CACHE: ${{ runner.temp }}/electron-builder
 
     steps:
       - name: Checkout repository
