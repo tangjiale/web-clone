@@ -16,7 +16,6 @@
 
 说明：
 
-- 仓库里仍保留 `src-tauri/` 目录，属于早期实验产物。
 - 当前实际运行、开发、打包、GitHub Actions 发布，均以 `Electron` 方案为准。
 
 ## 核心功能
@@ -170,6 +169,8 @@ web-clone/
 │     ├─ sync-version.cjs        # 同步版本号到历史配置文件
 │     ├─ collect_release_artifacts.cjs
 │     └─ build_latest_json.cjs   # 构建 GitHub Release 用 latest.json
+├─ build-resources/
+│  └─ icons/                     # Electron / Electron Builder 使用的应用图标资源
 ├─ src/
 │  ├─ App.tsx                    # 主界面与交互逻辑
 │  ├─ main.tsx                   # React 入口
@@ -180,7 +181,6 @@ web-clone/
 │  │  └─ types.ts                # 前后端共享类型
 │  └─ styles/
 │     └─ app.css                 # 全局样式
-├─ src-tauri/                    # 历史实验目录，当前不参与构建发布
 ├─ package.json
 └─ README.md
 ```
@@ -634,11 +634,6 @@ npm run build:linux:arm64
 
 - 分身浏览数据写入系统用户数据目录
 - 不写入项目源码目录
-
-### 3. Tauri 目录说明
-
-- `src-tauri/` 当前不参与 Electron 开发与发布流程
-- 仅保留为历史实验目录
 
 ## 后续规划
 

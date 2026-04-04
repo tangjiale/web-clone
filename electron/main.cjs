@@ -9,7 +9,7 @@ const packageJson = require('../package.json');
 
 const APP_NAME = '网站分身管理器';
 const APP_ID = 'com.webclone.manager';
-const APP_ICON_PNG = path.join(__dirname, '..', 'src-tauri', 'icons', 'icon.png');
+const APP_ICON_PNG = path.join(__dirname, '..', 'build-resources', 'icons', 'icon.png');
 const DEV_SERVER_URL = process.env.WEB_CLONE_DEV_SERVER_URL || 'http://127.0.0.1:1420';
 
 app.setName(APP_NAME);

@@ -12,11 +12,6 @@ pnpm-debug.log*
 node_modules/
 dist/
 
-# Tauri / Rust
-src-tauri/target/
-src-tauri/gen/
-src-tauri/.cargo/
-
 # Local database / runtime data
 *.sqlite
 *.sqlite3

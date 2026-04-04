@@ -229,4 +229,4 @@ V1 当前实现采用轻桌面工作台风格：
 - 主界面：[src/App.tsx](/Users/tangjiale/Code/self/web-clone/src/App.tsx)
 - 前端命令层：[src/lib/api.ts](/Users/tangjiale/Code/self/web-clone/src/lib/api.ts)
 - 前端类型：[src/lib/types.ts](/Users/tangjiale/Code/self/web-clone/src/lib/types.ts)
-- 桌面后端：[src-tauri/src/main.rs](/Users/tangjiale/Code/self/web-clone/src-tauri/src/main.rs)
+- 桌面后端：[main.cjs](/Users/tangjiale/Code/self/web-clone/electron/main.cjs)
