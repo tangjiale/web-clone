@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format follows a simple version-section structure so GitHub Actions can extract the release notes automatically.
 
+## [0.1.2] - 2026-04-04
+
+### Fixed
+
+- Adjusted the Windows NSIS installer mode to avoid the blank assisted-installer window seen on some Windows x64 machines.
+- Synced the release version tooling so `package-lock.json` now follows `package.json` automatically during release preparation.
+
 ## [0.1.1] - 2026-04-04
 
 ### Added

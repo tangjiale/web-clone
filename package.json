@@ -1,7 +1,7 @@
 {
   "name": "web-clone-manager",
   "private": true,
-  "version": "0.1.1",
+  "version": "0.1.2",
   "webCloneUpdateUrl": "https://github.com/tangjiale/web-clone/releases/latest/download/latest.json",
   "description": "桌面端网站多账号分身管理工具，支持站点分身、独立 Cookie 与本地存储隔离，以及内嵌/外置双模式浏览。",
   "author": {
@@ -94,6 +94,7 @@
     },
     "nsis": {
       "oneClick": false,
+      "selectPerMachineByDefault": true,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true
