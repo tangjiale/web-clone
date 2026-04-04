@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format follows a simple version-section structure so GitHub Actions can extract the release notes automatically.
 
+## [0.1.3] - 2026-04-04
+
+### Fixed
+
+- Fixed the packaged Electron renderer entry to use relative Vite asset paths so the Windows desktop app no longer opens to a blank white screen after installation.
+
 ## [0.1.2] - 2026-04-04
 
 ### Fixed
