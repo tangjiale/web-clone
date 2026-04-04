@@ -6,6 +6,8 @@ const { spawnSync } = require('child_process');
 
 const rootDir = path.resolve(__dirname, '..', '..');
 const packageJsonPath = path.join(rootDir, 'package.json');
+const changelogPath = path.join(rootDir, 'CHANGELOG.md');
+const changelogZhPath = path.join(rootDir, 'CHANGELOG.zh-CN.md');
 
 function parseArgs(argv) {
   const result = {};
@@ -113,10 +115,51 @@ function hasCachedChanges() {
   return result.status === 1;
 }
 
+function extractSection(filePath, version) {
+  const lines = fs.readFileSync(filePath, 'utf8').split(/\r?\n/);
+  const escapedVersion = version.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const patterns = [
+    new RegExp(`^## \\[${escapedVersion}\\]\\s*-.*$`),
+    new RegExp(`^## \\[v${escapedVersion}\\]\\s*-.*$`),
+  ];
+
+  let capture = false;
+  let found = false;
+  const sectionLines = [];
+
+  for (const line of lines) {
+    if (line.startsWith('## ')) {
+      const matched = patterns.some((pattern) => pattern.test(line));
+      if (capture && !matched) {
+        break;
+      }
+      if (matched) {
+        capture = true;
+        found = true;
+      }
+    }
+
+    if (capture) {
+      sectionLines.push(line);
+    }
+  }
+
+  if (!found) {
+    throw new Error(`在 ${path.basename(filePath)} 中未找到版本 ${version} 的更新日志段落`);
+  }
+
+  return sectionLines.join('\n').trim();
+}
+
+function runPreflightChecks(version) {
+  extractSection(changelogPath, version);
+  extractSection(changelogZhPath, version);
+}
+
 function main() {
   const args = parseArgs(process.argv);
   const dryRun = Boolean(args['dry-run']);
-  const skipPackage = Boolean(args['skip-package']);
+  const withPackage = Boolean(args['with-package'] || args.package);
   const skipPush = Boolean(args['skip-push']);
   const packageJson = readJson(packageJsonPath);
   const version = String(packageJson.version || '').trim();
@@ -153,13 +196,17 @@ function main() {
     console.log('\n当前工作区无未提交改动，将基于当前 HEAD 创建 tag。');
   }
 
-  if (!skipPackage) {
-    const packageArgs = dryRun
-      ? ['run', 'release:package', '--', '--dry-run']
-      : ['run', 'release:package'];
-    runCommand(resolveCommand('npm'), packageArgs);
+  console.log('\n先执行发版预检查。');
+  runPreflightChecks(version);
+  console.log(`- 已校验 package.json 版本: v${version}`);
+  console.log('- 已校验 CHANGELOG.md 对应版本段');
+  console.log('- 已校验 CHANGELOG.zh-CN.md 对应版本段');
+
+  if (withPackage) {
+    console.log('\n已开启本地打包模式，会先在本地构建当前平台产物。');
+    runCommand(resolveCommand('npm'), ['run', 'release:package'], { dryRun });
   } else {
-    console.log('\n已跳过本地发版打包检查。');
+    console.log('\n默认跳过本地桌面安装包构建，GitHub Actions 会在云端完成全部打包。');
   }
 
   runCommand(resolveCommand('git'), ['add', '-A'], { dryRun });

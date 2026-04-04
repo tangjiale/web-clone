@@ -417,19 +417,20 @@ npm run release:publish
 
 - 运行前请先改好 [package.json](/Users/tangjiale/Code/self/web-clone/package.json) 里的 `version`
 - 运行前请先补好 [CHANGELOG.md](/Users/tangjiale/Code/self/web-clone/CHANGELOG.md) 和 [CHANGELOG.zh-CN.md](/Users/tangjiale/Code/self/web-clone/CHANGELOG.zh-CN.md)
-- 脚本默认会先执行 `npm run release:package`
+- 脚本默认只做发版预检查，不做本地桌面安装包构建
+- 预检查会校验版本号与中英文 changelog 段落
 - 然后自动执行：
   - `git add -A`
   - `git commit -m "chore: release v<version>"`
   - `git tag -a v<version> -m "release v<version>"`
   - `git push origin <current-branch>`
   - `git push origin v<version>`
-- tag 推送成功后会自动触发 GitHub Actions 发布
+- tag 推送成功后会自动触发 GitHub Actions，在云端完成全部平台打包与发布
 
 可选参数：
 
 - `npm run release:publish -- --dry-run`
-- `npm run release:publish -- --skip-package`
+- `npm run release:publish -- --with-package`
 - `npm run release:publish -- --skip-push`
 
 ## GitHub Actions 自动打包发布
