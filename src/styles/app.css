@@ -674,6 +674,52 @@ body {
   margin-top: 10px;
 }
 
+.release-notes-markdown {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.release-notes-heading.ant-typography {
+  margin: 0;
+  color: #172033;
+}
+
+.release-notes-heading-h2.ant-typography {
+  margin-top: 4px;
+  font-size: 16px;
+}
+
+.release-notes-heading-h3.ant-typography {
+  margin-top: 6px;
+  font-size: 15px;
+}
+
+.release-notes-heading-h4.ant-typography {
+  margin-top: 4px;
+  font-size: 14px;
+}
+
+.release-notes-paragraph.ant-typography {
+  margin: 0;
+  color: #44566f;
+  line-height: 1.8;
+}
+
+.release-notes-list {
+  margin: 0;
+  padding-left: 20px;
+  color: #44566f;
+}
+
+.release-notes-list li {
+  line-height: 1.8;
+}
+
+.release-notes-list li + li {
+  margin-top: 4px;
+}
+
 @media (max-width: 1280px) {
   .browser-tabs,
   .browser-action-bar {

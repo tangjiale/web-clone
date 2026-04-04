@@ -43,6 +43,7 @@ import {
 } from 'antd';
 import type { MenuProps } from 'antd';
 import dayjs from 'dayjs';
+import type { ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from './lib/api';
 import logoUrl from './assets/logo.svg';
@@ -94,6 +95,166 @@ function normalizeUrlInput(value: string) {
     return input;
   }
   return `https://${input}`;
+}
+
+type MarkdownBlock =
+  | { type: 'h2' | 'h3' | 'h4'; content: string }
+  | { type: 'paragraph'; content: string }
+  | { type: 'list'; items: string[] };
+
+function renderInlineMarkdown(text: string): ReactNode[] {
+  const result: ReactNode[] = [];
+  const pattern = /(`([^`]+)`|\*\*([^*]+)\*\*|\[([^\]]+)\]\((https?:\/\/[^)]+)\))/g;
+  let lastIndex = 0;
+  let matchIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = pattern.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      result.push(text.slice(lastIndex, match.index));
+    }
+
+    if (match[2]) {
+      result.push(
+        <Typography.Text code key={`code-${matchIndex}`}>
+          {match[2]}
+        </Typography.Text>,
+      );
+    } else if (match[3]) {
+      result.push(
+        <Typography.Text strong key={`strong-${matchIndex}`}>
+          {match[3]}
+        </Typography.Text>,
+      );
+    } else if (match[4] && match[5]) {
+      result.push(
+        <Typography.Link href={match[5]} target="_blank" rel="noreferrer" key={`link-${matchIndex}`}>
+          {match[4]}
+        </Typography.Link>,
+      );
+    }
+
+    lastIndex = pattern.lastIndex;
+    matchIndex += 1;
+  }
+
+  if (lastIndex < text.length) {
+    result.push(text.slice(lastIndex));
+  }
+
+  return result;
+}
+
+function parseMarkdownBlocks(markdown: string): MarkdownBlock[] {
+  const lines = markdown.replace(/\r\n?/g, '\n').split('\n');
+  const blocks: MarkdownBlock[] = [];
+  let paragraphLines: string[] = [];
+  let listItems: string[] = [];
+
+  const flushParagraph = () => {
+    if (!paragraphLines.length) {
+      return;
+    }
+    blocks.push({
+      type: 'paragraph',
+      content: paragraphLines.join(' '),
+    });
+    paragraphLines = [];
+  };
+
+  const flushList = () => {
+    if (!listItems.length) {
+      return;
+    }
+    blocks.push({
+      type: 'list',
+      items: [...listItems],
+    });
+    listItems = [];
+  };
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+
+    if (!line) {
+      flushParagraph();
+      flushList();
+      continue;
+    }
+
+    const h4 = line.match(/^####\s+(.+)$/);
+    const h3 = line.match(/^###\s+(.+)$/);
+    const h2 = line.match(/^##\s+(.+)$/);
+    const listItem = line.match(/^[-*]\s+(.+)$/);
+
+    if (h4 || h3 || h2) {
+      flushParagraph();
+      flushList();
+      blocks.push({
+        type: h4 ? 'h4' : h3 ? 'h3' : 'h2',
+        content: (h4 || h3 || h2)?.[1] ?? line,
+      });
+      continue;
+    }
+
+    if (listItem) {
+      flushParagraph();
+      listItems.push(listItem[1]);
+      continue;
+    }
+
+    flushList();
+    paragraphLines.push(line);
+  }
+
+  flushParagraph();
+  flushList();
+
+  return blocks;
+}
+
+function renderMarkdownContent(markdown: string) {
+  return parseMarkdownBlocks(markdown).map((block, index) => {
+    if (block.type === 'h2') {
+      return (
+        <Typography.Title level={5} className="release-notes-heading release-notes-heading-h2" key={`block-${index}`}>
+          {renderInlineMarkdown(block.content)}
+        </Typography.Title>
+      );
+    }
+
+    if (block.type === 'h3') {
+      return (
+        <Typography.Title level={5} className="release-notes-heading release-notes-heading-h3" key={`block-${index}`}>
+          {renderInlineMarkdown(block.content)}
+        </Typography.Title>
+      );
+    }
+
+    if (block.type === 'h4') {
+      return (
+        <Typography.Title level={5} className="release-notes-heading release-notes-heading-h4" key={`block-${index}`}>
+          {renderInlineMarkdown(block.content)}
+        </Typography.Title>
+      );
+    }
+
+    if (block.type === 'list') {
+      return (
+        <ul className="release-notes-list" key={`block-${index}`}>
+          {block.items.map((item, itemIndex) => (
+            <li key={`item-${itemIndex}`}>{renderInlineMarkdown(item)}</li>
+          ))}
+        </ul>
+      );
+    }
+
+    return (
+      <Typography.Paragraph className="release-notes-paragraph" key={`block-${index}`}>
+        {renderInlineMarkdown(block.content)}
+      </Typography.Paragraph>
+    );
+  });
 }
 
 function getSiteIconCandidates(site?: Site | null) {
@@ -1865,12 +2026,12 @@ function App() {
           <Space direction="vertical" size={12} style={{ width: '100%' }}>
             <Space wrap>
               <Tag>当前 v{updateCheckResult.currentVersion}</Tag>
-              {updateCheckResult.latestVersion ? (
+              {hasAvailableUpdate && updateCheckResult.latestVersion ? (
                 <Tag color={hasAvailableUpdate ? 'error' : 'processing'}>
                   最新 v{updateCheckResult.latestVersion}
                 </Tag>
               ) : null}
-              {updateCheckResult.downloadFileName ? (
+              {hasAvailableUpdate && updateCheckResult.downloadFileName ? (
                 <Tag color="purple">{updateCheckResult.downloadFileName}</Tag>
               ) : null}
             </Space>
@@ -1888,17 +2049,13 @@ function App() {
               description={`最近检查：${dayjs(updateCheckResult.checkedAt).format('YYYY-MM-DD HH:mm:ss')}`}
             />
 
-            {updateCheckResult.releaseNotes ? (
+            {hasAvailableUpdate && updateCheckResult.releaseNotes ? (
               <Card size="small" title="更新内容">
-                <Typography.Paragraph
-                  style={{ marginBottom: 0, whiteSpace: 'pre-wrap' }}
-                >
-                  {updateCheckResult.releaseNotes}
-                </Typography.Paragraph>
+                <div className="release-notes-markdown">
+                  {renderMarkdownContent(updateCheckResult.releaseNotes)}
+                </div>
               </Card>
-            ) : (
-              <Typography.Text type="secondary">当前没有可展示的更新说明。</Typography.Text>
-            )}
+            ) : null}
 
             {downloadedUpdate?.status === 'downloaded' && downloadedUpdate.filePath ? (
               <Card size="small" title="已下载更新包">
