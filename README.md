@@ -407,6 +407,31 @@ release-local/v0.1.0/
 - 在 Linux 上会按当前架构构建对应的 `AppImage / deb / rpm`
 - 这个脚本只负责本地打包整理，不会自动创建 git tag 或推送远端
 
+### 一键发布到 GitHub
+
+```bash
+npm run release:publish
+```
+
+说明：
+
+- 运行前请先改好 [package.json](/Users/tangjiale/Code/self/web-clone/package.json) 里的 `version`
+- 运行前请先补好 [CHANGELOG.md](/Users/tangjiale/Code/self/web-clone/CHANGELOG.md) 和 [CHANGELOG.zh-CN.md](/Users/tangjiale/Code/self/web-clone/CHANGELOG.zh-CN.md)
+- 脚本默认会先执行 `npm run release:package`
+- 然后自动执行：
+  - `git add -A`
+  - `git commit -m "chore: release v<version>"`
+  - `git tag -a v<version> -m "release v<version>"`
+  - `git push origin <current-branch>`
+  - `git push origin v<version>`
+- tag 推送成功后会自动触发 GitHub Actions 发布
+
+可选参数：
+
+- `npm run release:publish -- --dry-run`
+- `npm run release:publish -- --skip-package`
+- `npm run release:publish -- --skip-push`
+
 ## GitHub Actions 自动打包发布
 
 项目已提供：

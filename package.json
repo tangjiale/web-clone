@@ -22,6 +22,7 @@
     "rebuild:electron": "electron-builder install-app-deps",
     "sync-version": "node ./scripts/release/sync-version.cjs",
     "release:package": "node ./scripts/release/package-release.cjs",
+    "release:publish": "node ./scripts/release/publish-release.cjs",
     "dev": "vite --host 0.0.0.0 --port 1420",
     "dev:electron": "wait-on tcp:1420 && ./scripts/run-dev-electron.sh",
     "dev:desktop": "npm run rebuild:electron && concurrently -k \"npm:dev\" \"npm:dev:electron\"",
