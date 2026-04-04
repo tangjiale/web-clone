@@ -9,6 +9,7 @@ const packageJson = require('../package.json');
 
 const APP_NAME = '网站分身管理器';
 const APP_ID = 'com.webclone.manager';
+const APP_HTTP_TOKEN = 'WebCloneManager';
 const APP_ICON_PNG = path.join(__dirname, '..', 'build-resources', 'icons', 'icon.png');
 const DEV_SERVER_URL = process.env.WEB_CLONE_DEV_SERVER_URL || 'http://127.0.0.1:1420';
 
@@ -24,6 +25,34 @@ const guestPartitionToProfileId = new Map();
 const pendingGuestAttachQueue = [];
 const guestContentsToProfileId = new Map();
 let embeddedBounds = { x: 0, y: 0, width: 0, height: 0 };
+
+function canGoBackSafely(contents) {
+  if (!contents || contents.isDestroyed()) {
+    return false;
+  }
+  try {
+    if (contents.navigationHistory && typeof contents.navigationHistory.canGoBack === 'function') {
+      return contents.navigationHistory.canGoBack();
+    }
+    return contents.canGoBack();
+  } catch {
+    return false;
+  }
+}
+
+function canGoForwardSafely(contents) {
+  if (!contents || contents.isDestroyed()) {
+    return false;
+  }
+  try {
+    if (contents.navigationHistory && typeof contents.navigationHistory.canGoForward === 'function') {
+      return contents.navigationHistory.canGoForward();
+    }
+    return contents.canGoForward();
+  } catch {
+    return false;
+  }
+}
 
 function getAppIcon() {
   const icon = nativeImage.createFromPath(APP_ICON_PNG);
@@ -381,7 +410,7 @@ async function checkForUpdates() {
     const response = await fetch(sourceUrl, {
       headers: {
         Accept: 'application/json, text/plain, */*',
-        'User-Agent': `${APP_NAME}/${currentVersion}`,
+        'User-Agent': `${APP_HTTP_TOKEN}/${currentVersion}`,
       },
     });
     if (!response.ok) {
@@ -465,7 +494,7 @@ async function downloadUpdate({ downloadUrl, fileName } = {}) {
     const response = await fetch(sourceUrl, {
       headers: {
         Accept: 'application/octet-stream, application/json, text/plain, */*',
-        'User-Agent': `${APP_NAME}/${app.getVersion()}`,
+        'User-Agent': `${APP_HTTP_TOKEN}/${app.getVersion()}`,
       },
       redirect: 'follow',
     });
@@ -634,8 +663,8 @@ function syncEmbeddedNavigationState(profileId, patch = {}) {
   runtimeSessions.set(profileId, {
     ...current,
     currentUrl,
-    canGoBack: view.webContents.canGoBack(),
-    canGoForward: view.webContents.canGoForward(),
+    canGoBack: canGoBackSafely(view.webContents),
+    canGoForward: canGoForwardSafely(view.webContents),
     ...patch,
   });
   emitSessionsChanged();
@@ -825,8 +854,13 @@ function bindEmbeddedView(profileId, view) {
     });
   });
 
-  view.webContents.on('console-message', (_event, level, message, line, sourceId) => {
-    console.info('[embedded-view:console]', profileId, { level, message, line, sourceId });
+  view.webContents.on('console-message', (event) => {
+    console.info('[embedded-view:console]', profileId, {
+      level: event.level,
+      message: event.message,
+      line: event.lineNumber,
+      sourceId: event.sourceId,
+    });
   });
 }
 
@@ -1235,8 +1269,13 @@ function createMainWindow() {
   });
 
   mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
-  mainWindow.webContents.on('console-message', (_event, level, message, line, sourceId) => {
-    console.info('[renderer:console]', { level, message, line, sourceId });
+  mainWindow.webContents.on('console-message', (event) => {
+    console.info('[renderer:console]', {
+      level: event.level,
+      message: event.message,
+      line: event.lineNumber,
+      sourceId: event.sourceId,
+    });
   });
   mainWindow.webContents.on('render-process-gone', (_event, details) => {
     console.error('[renderer:render-process-gone]', details);
@@ -1398,13 +1437,13 @@ function registerIpcHandlers() {
     }
     if (current.mode === 'external') {
       const windowInstance = externalWindows.get(profileId);
-      if (windowInstance?.webContents.canGoBack()) {
+      if (canGoBackSafely(windowInstance?.webContents)) {
         windowInstance.webContents.goBack();
       }
       return;
     }
     const view = embeddedViews.get(profileId);
-    if (view?.webContents.canGoBack()) {
+    if (canGoBackSafely(view?.webContents)) {
       view.webContents.goBack();
     }
   });
@@ -1415,13 +1454,13 @@ function registerIpcHandlers() {
     }
     if (current.mode === 'external') {
       const windowInstance = externalWindows.get(profileId);
-      if (windowInstance?.webContents.canGoForward()) {
+      if (canGoForwardSafely(windowInstance?.webContents)) {
         windowInstance.webContents.goForward();
       }
       return;
     }
     const view = embeddedViews.get(profileId);
-    if (view?.webContents.canGoForward()) {
+    if (canGoForwardSafely(view?.webContents)) {
       view.webContents.goForward();
     }
   });

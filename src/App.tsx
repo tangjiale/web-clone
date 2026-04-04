@@ -1059,7 +1059,7 @@ function App() {
 
   const managerContent = (
     <div className="manager-center">
-      <Card className="manager-hero" bordered={false}>
+      <Card className="manager-hero" variant="borderless">
         <Flex justify="space-between" align="center" gap={12} wrap>
           <div className="manager-hero-copy">
             <Typography.Title level={5} style={{ margin: 0 }}>
