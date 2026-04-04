@@ -430,6 +430,13 @@ git tag v0.1.0
 git push origin v0.1.0
 ```
 
+也支持在 GitHub Actions 页面手动触发 `workflow_dispatch`。
+
+说明：
+
+- 手动触发主要用于验证多平台构建链路
+- 手动触发不会创建 GitHub Release，也不会发布 latest
+
 ### 工作流行为
 
 - macOS 构建 `arm64 / x64 / universal` 三种 `.dmg`
@@ -445,6 +452,7 @@ git push origin v0.1.0
 - 自动生成 `SHA256SUMS.txt`
 - 自动创建 GitHub Release 草稿
 - tag 触发时自动发布为 latest release
+- 手动触发仅做构建验链，不生成 `untagged` 草稿发布
 
 ## 标准发版步骤
 
