@@ -305,6 +305,7 @@ jobs:
         shell: bash
         run: |
           gh release edit "${{ needs.meta.outputs.tag }}" \
+            -R "${GITHUB_REPOSITORY}" \
             --draft=false \
             --prerelease=false \
             --latest
