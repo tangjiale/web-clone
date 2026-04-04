@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format follows a simple version-section structure so GitHub Actions can extract the release notes automatically.
 
+## [0.1.1] - 2026-04-04
+
+### Added
+
+- Added a one-command release publish script for version validation, local packaging, git commit, tag creation, and remote push.
+
+### Fixed
+
+- Corrected Windows release artifact selection so GitHub Releases uploads the full NSIS installer instead of a tiny unpacked helper executable.
+- Added a size guard for Windows release assets so future packaging mistakes fail fast in CI.
+
 ## [0.1.0] - 2026-04-03
 
 ### Added
