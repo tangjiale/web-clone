@@ -34,6 +34,5 @@ release/
 release-local/
 release-assets/
 release-upload/
-docs/longshot*.png
 !scripts/release/
 !scripts/release/**
